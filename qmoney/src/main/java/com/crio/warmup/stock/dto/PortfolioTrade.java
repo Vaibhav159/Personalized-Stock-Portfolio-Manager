@@ -17,12 +17,12 @@ public class PortfolioTrade {
   private TradeType tradeType;
   private LocalDate purchaseDate;
 
-  /*public PortfolioTrade(String symbol, int quantity, LocalDate purchaseDate) {
+  public PortfolioTrade(String symbol, int quantity, LocalDate purchaseDate) {
     this.symbol = symbol;
     this.quantity = quantity;
     this.purchaseDate = purchaseDate;
     this.tradeType = TradeType.BUY;
-  }*/
+  }
 
   public void setSymbol(String symbol) {
     this.symbol = symbol;
