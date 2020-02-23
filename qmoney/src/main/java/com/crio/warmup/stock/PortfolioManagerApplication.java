@@ -1,6 +1,7 @@
 
 package com.crio.warmup.stock;
 
+import com.crio.warmup.stock.dto.PortfolioTrade;
 import com.crio.warmup.stock.log.UncaughtExceptionHandler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,16 +41,13 @@ public class PortfolioManagerApplication {
 
   public static List<String> mainReadFile(String[] args) throws IOException, URISyntaxException {
     String x = args[0];
-    File file = resolveFileFromResources(x);
-    ObjectMapper objectMapper = new ObjectMapper();
-    List<MainParser> mp = objectMapper.readValue(file, new TypeReference<List<MainParser>>(){});
+    File f = resolveFileFromResources(x);
+    ObjectMapper objectMapper = getObjectMapper();
+    List<PortfolioTrade> m = objectMapper.readValue(f, new TypeReference<List<PortfolioTrade>>(){});
     List<String> list = new ArrayList<String>(); 
-    for (int i = 0; i < mp.size(); i++) {
-      list.add(mp.get(i).getSymbol());
+    for (int i = 0; i < m.size(); i++) {
+      list.add(m.get(i).getSymbol());
     }
-        
-    
-
     return list;
   }
 
