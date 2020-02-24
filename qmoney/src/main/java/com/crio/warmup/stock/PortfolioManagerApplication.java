@@ -123,8 +123,8 @@ public class PortfolioManagerApplication {
     String lineNumberFromTestFileInStackTrace = "24";
 
     return Arrays.asList(new String[] { 
-      valueOfArgument0, resultOfResolveFilePathArgs0, toStringOfObjectMapper,
-        functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace 
+        valueOfArgument0, resultOfResolveFilePathArgs0, toStringOfObjectMapper,
+        functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace
         });
   }
 
@@ -165,8 +165,8 @@ public class PortfolioManagerApplication {
     List<TotalReturnsDto> td = new ArrayList<TotalReturnsDto>();
     for (int i = 0; i < list.size(); i++) {
       String url = "https://api.tiingo.com/tiingo/daily/" + list.get(i) + "/prices?startDate="
-          + m.get(i).getPurchaseDate() + "&endDate=" 
-          + args[1] + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
+          + m.get(i).getPurchaseDate() 
+          + "&endDate=" + args[1] + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
       ObjectMapper mapper = new ObjectMapper();
       mapper.registerModule(new JavaTimeModule());
       RestTemplate restTemplate = new RestTemplate();
@@ -248,18 +248,13 @@ public class PortfolioManagerApplication {
   // PortfolioManagerApplicationTest.testCalculateAnnualizedReturn
 
   public static AnnualizedReturn calculateAnnualizedReturns(LocalDate endDate, 
-      PortfolioTrade trade, Double buyPrice,Double sellPrice) {
+      PortfolioTrade trade, Double buyPrice,
+      Double sellPrice) {
     double totalReturn;
     double annualized;
     double maxdays;
-    double total = endDate.getYear() - trade.getPurchaseDate().getYear();
     double daysBetween = ChronoUnit.DAYS.between(trade.getPurchaseDate(), endDate);
-    if (total == 0) {
-
-      maxdays = 365 / daysBetween;
-    } else {
-      maxdays = 1 / total;
-    }
+    maxdays = 365 / daysBetween;
     totalReturn = (sellPrice - buyPrice) / buyPrice;
     annualized = Math.pow((1 + totalReturn), maxdays) - 1;
     return new AnnualizedReturn(trade.getSymbol(), annualized, totalReturn);
