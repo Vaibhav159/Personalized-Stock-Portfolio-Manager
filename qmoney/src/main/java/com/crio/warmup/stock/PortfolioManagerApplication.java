@@ -68,9 +68,7 @@ public class PortfolioManagerApplication {
   }
 
   private static File resolveFileFromResources(String filename) throws URISyntaxException {
-    return Paths.get(
-      Thread.currentThread().getContextClassLoader().getResource(filename).toURI()
-      ).toFile();
+    return Paths.get(Thread.currentThread().getContextClassLoader().getResource(filename).toURI()).toFile();
   }
 
   private static ObjectMapper getObjectMapper() {
@@ -122,10 +120,8 @@ public class PortfolioManagerApplication {
     String functionNameFromTestFileInStackTrace = "mainReadFile()";
     String lineNumberFromTestFileInStackTrace = "24";
 
-    return Arrays.asList(new String[] { 
-      valueOfArgument0, resultOfResolveFilePathArgs0,
-      toStringOfObjectMapper,
-      functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace });
+    return Arrays.asList(new String[] { valueOfArgument0, resultOfResolveFilePathArgs0, toStringOfObjectMapper,
+        functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace });
   }
 
   // TODO: CRIO_TASK_MODULE_REST_API
@@ -165,14 +161,13 @@ public class PortfolioManagerApplication {
     List<TotalReturnsDto> td = new ArrayList<TotalReturnsDto>();
     for (int i = 0; i < list.size(); i++) {
       String url = "https://api.tiingo.com/tiingo/daily/" + list.get(i) + "/prices?startDate="
-          + m.get(i).getPurchaseDate() + "&endDate=" + args[1] 
-          + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
+          + m.get(i).getPurchaseDate() + "&endDate=" + args[1] + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
       ObjectMapper mapper = new ObjectMapper();
       mapper.registerModule(new JavaTimeModule());
       RestTemplate restTemplate = new RestTemplate();
       String result = restTemplate.getForObject(url, String.class);
-      List<TiingoCandle> collection = mapper.readValue(
-          result, new TypeReference<ArrayList<TiingoCandle>>() {});
+      List<TiingoCandle> collection = mapper.readValue(result, new TypeReference<ArrayList<TiingoCandle>>() {
+      });
       td.add(new TotalReturnsDto(list.get(i), collection.get(collection.size() - 1).getClose()));
     }
     Collections.sort(td, Comparator.comparingDouble(TotalReturnsDto::getClosingPrice));
@@ -183,11 +178,91 @@ public class PortfolioManagerApplication {
     return ans;
   }
 
+  // TODO: CRIO_TASK_MODULE_CALCULATIONS
+  // Copy the relevant code from #mainReadQuotes to parse the Json into
+  // PortfolioTrade list and
+  // Get the latest quotes from TIingo.
+  // Now That you have the list of PortfolioTrade And their data,
+  // With this data, Calculate annualized returns for the stocks provided in the
+  // Json
+  // Below are the values to be considered for calculations.
+  // buy_price = open_price on purchase_date and sell_value = close_price on
+  // end_date
+  // startDate and endDate are already calculated in module2
+  // using the function you just wrote #calculateAnnualizedReturns
+  // Return the list of AnnualizedReturns sorted by annualizedReturns in
+  // descending order.
+  // use gralde command like below to test your code
+  // ./gradlew run --args="trades.json 2020-01-01"
+  // ./gradlew run --args="trades.json 2019-07-01"
+  // ./gradlew run --args="trades.json 2019-12-03"
+  // where trades.json is your json file
+
+  public static List<AnnualizedReturn> mainCalculateSingleReturn(String[] args) throws IOException, URISyntaxException {
+    String x = args[0];
+    File f = resolveFileFromResources(x);
+    ObjectMapper objectMapper = getObjectMapper();
+    List<PortfolioTrade> m = objectMapper.readValue(f, new TypeReference<List<PortfolioTrade>>() {
+    });
+    List<String> list = new ArrayList<String>();
+    for (int i = 0; i < m.size(); i++) {
+      list.add(m.get(i).getSymbol());
+    }
+    List<AnnualizedReturn> ar = new ArrayList<AnnualizedReturn>();
+    for (int i = 0; i < list.size(); i++) {
+      String url = "https://api.tiingo.com/tiingo/daily/" + list.get(i) + "/prices?startDate="
+          + m.get(i).getPurchaseDate() + "&endDate=" + args[1] + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
+      ObjectMapper mapper = new ObjectMapper();
+      mapper.registerModule(new JavaTimeModule());
+      RestTemplate restTemplate = new RestTemplate();
+      String result = restTemplate.getForObject(url, String.class);
+      List<TiingoCandle> collection = mapper.readValue(result, new TypeReference<ArrayList<TiingoCandle>>() {
+      });
+      ar.add(calculateAnnualizedReturns(LocalDate.parse(args[1]), m.get(i), collection.get(0).getOpen(),
+          collection.get(collection.size() - 1).getClose()));
+    }
+    Collections.sort(ar, Collections.reverseOrder(Comparator.comparingDouble(AnnualizedReturn::getAnnualizedReturn)));
+    System.out.println(ar.get(0).getAnnualizedReturn() + " " + ar.get(0).getTotalReturns());
+    return ar;
+  }
+
+  // TODO: CRIO_TASK_MODULE_CALCULATIONS
+  // annualized returns should be calculated in two steps -
+  // 1. Calculate totalReturn = (sell_value - buy_value) / buy_value
+  // Store the same as totalReturns
+  // 2. calculate extrapolated annualized returns by scaling the same in years
+  // span. The formula is
+  // annualized_returns = (1 + total_returns) ^ (1 / total_num_years) - 1
+  // Store the same as annualized_returns
+  // return the populated list of AnnualizedReturn for all stocks,
+  // Test the same using below specified command. The build should be successful
+  // ./gradlew test --tests
+  // PortfolioManagerApplicationTest.testCalculateAnnualizedReturn
+
+  public static AnnualizedReturn calculateAnnualizedReturns(LocalDate endDate, PortfolioTrade trade, Double buyPrice,
+      Double sellPrice) {
+    double totalReturn, annualized_returns, maxdays;
+    double total_num_years = endDate.getYear() - trade.getPurchaseDate().getYear();
+    double daysBetween = ChronoUnit.DAYS.between(trade.getPurchaseDate(), endDate);
+    if (total_num_years == 0) {
+
+      maxdays = 365 / daysBetween;
+    } else {
+      maxdays = 1 / total_num_years;
+    }
+    totalReturn = (sellPrice - buyPrice) / buyPrice;
+    annualized_returns = Math.pow((1 + totalReturn), maxdays) - 1;
+    System.out.println("real" + annualized_returns + " " + totalReturn + " " + total_num_years + " " + daysBetween);
+    return new AnnualizedReturn(trade.getSymbol(), annualized_returns, totalReturn);
+  }
+
   public static void main(String[] args) throws Exception {
     Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler());
     ThreadContext.put("runId", UUID.randomUUID().toString());
 
     // printJsonObject(mainReadFile(args));
-    printJsonObject(mainReadQuotes(args));
+    // printJsonObject(mainReadQuotes(args));
+    printJsonObject(mainCalculateSingleReturn(args));
+
   }
 }
