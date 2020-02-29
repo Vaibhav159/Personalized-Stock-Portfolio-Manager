@@ -7,10 +7,16 @@ import com.crio.warmup.stock.dto.PortfolioTrade;
 import com.crio.warmup.stock.dto.TiingoCandle;
 import com.crio.warmup.stock.dto.TotalReturnsDto;
 import com.crio.warmup.stock.log.UncaughtExceptionHandler;
+import com.crio.warmup.stock.portfolio.PortfolioManager;
+import com.crio.warmup.stock.portfolio.PortfolioManagerFactory;
+import com.crio.warmup.stock.portfolio.PortfolioManagerImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -123,8 +129,8 @@ public class PortfolioManagerApplication {
     String lineNumberFromTestFileInStackTrace = "24";
 
     return Arrays.asList(new String[] { 
-        valueOfArgument0, resultOfResolveFilePathArgs0, toStringOfObjectMapper,
-        functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace
+      valueOfArgument0, resultOfResolveFilePathArgs0, toStringOfObjectMapper,
+        functionNameFromTestFileInStackTrace, lineNumberFromTestFileInStackTrace 
         });
   }
 
@@ -225,8 +231,8 @@ public class PortfolioManagerApplication {
       String result = restTemplate.getForObject(url, String.class);
       List<TiingoCandle> collection = mapper.readValue(
           result, new TypeReference<ArrayList<TiingoCandle>>() {});
-      ar.add(calculateAnnualizedReturns(LocalDate.parse(args[1]), m.get(i), 
-          collection.get(0).getOpen(),
+      ar.add(calculateAnnualizedReturns(LocalDate.parse(args[1]),
+          m.get(i), collection.get(0).getOpen(),
           collection.get(collection.size() - 1).getClose()));
     }
     Collections.sort(ar, Collections.reverseOrder(
@@ -248,8 +254,7 @@ public class PortfolioManagerApplication {
   // PortfolioManagerApplicationTest.testCalculateAnnualizedReturn
 
   public static AnnualizedReturn calculateAnnualizedReturns(LocalDate endDate, 
-      PortfolioTrade trade, Double buyPrice,
-      Double sellPrice) {
+      PortfolioTrade trade, Double buyPrice,Double sellPrice) {
     double totalReturn;
     double annualized;
     double maxdays;
@@ -260,13 +265,42 @@ public class PortfolioManagerApplication {
     return new AnnualizedReturn(trade.getSymbol(), annualized, totalReturn);
   }
 
+  // TODO: CRIO_TASK_MODULE_REFACTOR
+  // Once you are done with the implementation inside PortfolioManagerImpl and
+  // PortfolioManagerFactory,
+  // Create PortfolioManager using PortfoliomanagerFactory,
+  // Refer to the code from previous modules to get the List<PortfolioTrades> and
+  // endDate, and
+  // call the newly implemented method in PortfolioManager to calculate the
+  // annualized returns.
+  // Test the same using the same commands as you used in module 3
+  // use gralde command like below to test your code
+  // ./gradlew run --args="trades.json 2020-01-01"
+  // ./gradlew run --args="trades.json 2019-07-01"
+  // ./gradlew run --args="trades.json 2019-12-03"
+  // where trades.json is your json file
+  // Confirm that you are getting same results as in Module3.
+
+  public static List<AnnualizedReturn> mainCalculateReturnsAfterRefactor(String[] args) 
+      throws Exception {
+    String file = args[0];
+    LocalDate endDate = LocalDate.parse(args[1]);
+    File contents = resolveFileFromResources(file);
+    ObjectMapper objectMapper = getObjectMapper();
+    List<PortfolioTrade> portfolioTrades = objectMapper.readValue(
+        contents, new TypeReference<List<PortfolioTrade>>() {});
+    RestTemplate restTemplate = new RestTemplate();
+    PortfolioManager portfolioManager = PortfolioManagerFactory.getPortfolioManager(restTemplate);
+    return portfolioManager.calculateAnnualizedReturn(portfolioTrades, endDate);
+  }
+
   public static void main(String[] args) throws Exception {
     Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler());
     ThreadContext.put("runId", UUID.randomUUID().toString());
 
     // printJsonObject(mainReadFile(args));
     // printJsonObject(mainReadQuotes(args));
-    printJsonObject(mainCalculateSingleReturn(args));
-
+    // printJsonObject(mainCalculateSingleReturn(args));
+    printJsonObject(mainCalculateReturnsAfterRefactor(args));
   }
 }
