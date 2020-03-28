@@ -7,6 +7,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import com.crio.warmup.stock.dto.AlphavantageCandle;
 import com.crio.warmup.stock.dto.AlphavantageDailyResponse;
 import com.crio.warmup.stock.dto.Candle;
+import com.crio.warmup.stock.exception.StockQuoteServiceException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,26 +35,27 @@ public class AlphavantageService implements StockQuotesService {
     return objectMapper;
   }
 
-
   @Override
   public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to)
-        throws JsonProcessingException {
+      throws JsonProcessingException, StockQuoteServiceException {
     String url = buildUri(symbol);
     ObjectMapper mapper = getObjectMapper();
-    String result = restTemplate.getForObject(url,String.class); 
-    System.out.println(result);
+    String result = restTemplate.getForObject(url, String.class);
     AlphavantageDailyResponse response = mapper.readValue(result, AlphavantageDailyResponse.class);
+    if (response.getCandles() == null) {
+      throw new StockQuoteServiceException(result);
+    }
     List<AlphavantageCandle> stockQuCandles = new ArrayList<AlphavantageCandle>();
     Map<LocalDate, AlphavantageCandle> ans = response.getCandles();
     for (Map.Entry<LocalDate, AlphavantageCandle> item : ans.entrySet()) {
-      if ((item.getKey().isEqual(from) || item.getKey().isAfter(from)) 
+      if ((item.getKey().isEqual(from) || item.getKey().isAfter(from))
           && (item.getKey().isBefore(to) || item.getKey().isEqual(to))) {
         AlphavantageCandle input = item.getValue();
         input.setDate(item.getKey());
         stockQuCandles.add(input);
       }
     }
-    Collections.sort(stockQuCandles,Comparator.comparing(AlphavantageCandle::getDate));
+    Collections.sort(stockQuCandles, Comparator.comparing(AlphavantageCandle::getDate));
     List<Candle> alphaCandle = new ArrayList<Candle>();
     alphaCandle.addAll(stockQuCandles);
     return alphaCandle;
@@ -95,3 +97,12 @@ public class AlphavantageService implements StockQuotesService {
   }
 
 }
+// TODO: CRIO_TASK_MODULE_EXCEPTIONS
+// Update the method signature to match the signature change in the interface.
+// Start throwing new StockQuoteServiceException when you get some invalid
+// response from
+// Alphavangate, or you encounter a runtime exception during Json parsing.
+// Make sure that the exception propagates all the way from PortfolioManager,
+// so that the external user's of our API are able to explicitly handle this
+// exception upfront.
+// CHECKSTYLE:OFF

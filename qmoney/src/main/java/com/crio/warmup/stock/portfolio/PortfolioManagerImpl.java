@@ -8,6 +8,7 @@ import com.crio.warmup.stock.dto.AnnualizedReturn;
 import com.crio.warmup.stock.dto.Candle;
 import com.crio.warmup.stock.dto.PortfolioTrade;
 import com.crio.warmup.stock.dto.TiingoCandle;
+import com.crio.warmup.stock.exception.StockQuoteServiceException;
 import com.crio.warmup.stock.quotes.StockQuotesService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -68,7 +69,8 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // public static AnnualizedReturn calculateAnnualizedReturns(LocalDate endDate,
   // PortfolioTrade trade, Double buyPrice,Double sellPrice)
   @Override
-  public List<AnnualizedReturn> calculateAnnualizedReturn(List<PortfolioTrade> portfolioTrades, LocalDate endDate) {
+  public List<AnnualizedReturn> calculateAnnualizedReturn(List<PortfolioTrade> portfolioTrades, LocalDate endDate)
+      throws StockQuoteServiceException {
     double totalReturn;
     double annualized;
     double maxdays;
@@ -98,7 +100,9 @@ public class PortfolioManagerImpl implements PortfolioManager {
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
-    }
+    } catch (StockQuoteServiceException e){
+      throw e;
+    } 
     Collections.sort(ar, Collections.reverseOrder(Comparator.comparingDouble(AnnualizedReturn::getAnnualizedReturn)));
     return ar;
 
@@ -121,10 +125,14 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // produced by
   // replacing the placeholders with actual parameters.
 
-  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException {
+  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException,StockQuoteServiceException {
     List<Candle> collCandles;
+    try{
     collCandles = this.stockQuotesService.getStockQuote(symbol, from, to);
-
+    }
+    catch(StockQuoteServiceException e){
+      throw e;
+    }
     return collCandles;
     /*
      * String s = buildUri(symbol, from, to); ObjectMapper mapper = new
