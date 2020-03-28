@@ -7,7 +7,7 @@ import org.springframework.web.client.RestTemplate;
 
 public class PortfolioManagerFactory {
 
-    // TODO: CRIO_TASK_MODULE_REFACTOR
+  // TODO: CRIO_TASK_MODULE_REFACTOR
   // Implement the method in such a way that it will return new Instance of
   // PortfolioManager using RestTemplate provided.
   public static PortfolioManager getPortfolioManager(RestTemplate restTemplate) {
@@ -26,12 +26,12 @@ public class PortfolioManagerFactory {
   //  ./gradlew test --tests PortfolioManagerFactory
 
 
-   public static PortfolioManager getPortfolioManager(String provider,
-     RestTemplate restTemplate) {
-      StockQuoteServiceFactory s1 = StockQuoteServiceFactory.INSTANCE;
-      StockQuotesService stockQuotesService = s1.getService(provider,restTemplate);
-      PortfolioManagerImpl obj1 = new PortfolioManagerImpl(stockQuotesService);
-     return obj1;
-   }
+  public static PortfolioManager getPortfolioManager(String provider,
+       RestTemplate restTemplate) {
+    StockQuoteServiceFactory s1 = StockQuoteServiceFactory.INSTANCE;
+    StockQuotesService stockQuotesService = s1.getService(provider,restTemplate);
+    PortfolioManagerImpl obj1 = new PortfolioManagerImpl(stockQuotesService);
+    return obj1;
+  }
 
 }

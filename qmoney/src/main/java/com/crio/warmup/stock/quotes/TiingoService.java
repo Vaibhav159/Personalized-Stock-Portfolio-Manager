@@ -23,6 +23,7 @@ public class TiingoService implements StockQuotesService {
   protected TiingoService(RestTemplate restTemplate) {
     this.restTemplate = restTemplate;
   }
+
   private static ObjectMapper getObjectMapper() {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.registerModule(new JavaTimeModule());
@@ -36,7 +37,8 @@ public class TiingoService implements StockQuotesService {
   //  Run the tests using command below -
   //  ./gradlew test --tests TiingoServiceTest and make sure it passes.
   @Override
-  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException {
+  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) 
+      throws JsonProcessingException {
     String url = buildUri(symbol, from, to);
     String result = restTemplate.getForObject(url, String.class);
     ObjectMapper mapper = getObjectMapper();

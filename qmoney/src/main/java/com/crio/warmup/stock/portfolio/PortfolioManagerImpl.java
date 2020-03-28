@@ -31,14 +31,15 @@ import org.springframework.web.client.RestTemplate;
 
 public class PortfolioManagerImpl implements PortfolioManager {
 
-  private RestTemplate restTemplate;
+  //private RestTemplate restTemplate;
   private StockQuotesService stockQuotesService;
 
   // Caution: Do not delete or modify the constructor, or else your build will
   // break!
   // This is absolutely necessary for backward compatibility
+  @Deprecated
   protected PortfolioManagerImpl(RestTemplate restTemplate) {
-    this.restTemplate = restTemplate;
+    //this.restTemplate = restTemplate;
   }
 
   // TODO: CRIO_TASK_MODULE_REFACTOR
