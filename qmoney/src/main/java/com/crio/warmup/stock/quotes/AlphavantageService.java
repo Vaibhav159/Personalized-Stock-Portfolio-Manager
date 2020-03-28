@@ -41,6 +41,7 @@ public class AlphavantageService implements StockQuotesService {
     String url = buildUri(symbol);
     ObjectMapper mapper = getObjectMapper();
     String result = restTemplate.getForObject(url,String.class); 
+    System.out.println(result);
     AlphavantageDailyResponse response = mapper.readValue(result, AlphavantageDailyResponse.class);
     List<AlphavantageCandle> stockQuCandles = new ArrayList<AlphavantageCandle>();
     Map<LocalDate, AlphavantageCandle> ans = response.getCandles();
