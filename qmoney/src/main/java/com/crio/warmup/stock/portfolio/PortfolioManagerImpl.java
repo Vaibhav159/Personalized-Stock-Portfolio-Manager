@@ -8,6 +8,7 @@ import com.crio.warmup.stock.dto.AnnualizedReturn;
 import com.crio.warmup.stock.dto.Candle;
 import com.crio.warmup.stock.dto.PortfolioTrade;
 import com.crio.warmup.stock.dto.TiingoCandle;
+import com.crio.warmup.stock.quotes.StockQuotesService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +32,7 @@ import org.springframework.web.client.RestTemplate;
 public class PortfolioManagerImpl implements PortfolioManager {
 
   private RestTemplate restTemplate;
+  private StockQuotesService stockQuotesService;
 
   // Caution: Do not delete or modify the constructor, or else your build will
   // break!
@@ -57,6 +59,10 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // run ./gradlew build in order to test yout code, and make sure that
   // the tests and static code quality pass.
 
+  public PortfolioManagerImpl(StockQuotesService stockQuotesService) {
+    this.stockQuotesService = stockQuotesService;
+  }
+
   // CHECKSTYLE:OFF
   // public static AnnualizedReturn calculateAnnualizedReturns(LocalDate endDate,
   // PortfolioTrade trade, Double buyPrice,Double sellPrice)
@@ -75,9 +81,11 @@ public class PortfolioManagerImpl implements PortfolioManager {
     List<AnnualizedReturn> ar = new ArrayList<AnnualizedReturn>();
     try {
       for (int i = 0; i < list.size(); i++) {
-        List<TiingoCandle> collection = getStockQuote(portfolioTrades.get(i).getSymbol(),
+        List<Candle> collection = getStockQuote(portfolioTrades.get(i).getSymbol(),
             portfolioTrades.get(i).getPurchaseDate(), endDate);
-
+        if (collection.isEmpty()) {
+          return ar;
+        }
         daysBetween = ChronoUnit.DAYS.between(portfolioTrades.get(i).getPurchaseDate(), endDate);
         buyPrice = collection.get(0).getOpen();
         sellPrice = collection.get(collection.size() - 1).getClose();
@@ -112,15 +120,18 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // produced by
   // replacing the placeholders with actual parameters.
 
-  public List<TiingoCandle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException {
+  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException {
+    List<Candle> collCandles;
+    collCandles = this.stockQuotesService.getStockQuote(symbol, from, to);
 
-    String s = buildUri(symbol, from, to);
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.registerModule(new JavaTimeModule());
-    String result = restTemplate.getForObject(s, String.class);
-    List<TiingoCandle> collection = mapper.readValue(result, new TypeReference<ArrayList<TiingoCandle>>() {
-    });
-    return collection;
+    return collCandles;
+    /*
+     * String s = buildUri(symbol, from, to); ObjectMapper mapper = new
+     * ObjectMapper(); mapper.registerModule(new JavaTimeModule()); String result =
+     * restTemplate.getForObject(s, String.class); List<TiingoCandle> collection =
+     * mapper.readValue(result, new TypeReference<ArrayList<TiingoCandle>>() { });
+     * return collection;
+     */
   }
 
   protected String buildUri(String symbol, LocalDate startDate, LocalDate endDate) {
