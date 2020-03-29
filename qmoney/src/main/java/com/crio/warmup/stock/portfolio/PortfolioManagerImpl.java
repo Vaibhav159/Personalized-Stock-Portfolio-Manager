@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +33,7 @@ import org.springframework.web.client.RestTemplate;
 
 public class PortfolioManagerImpl implements PortfolioManager {
 
-  //private RestTemplate restTemplate;
+  // private RestTemplate restTemplate;
   private StockQuotesService stockQuotesService;
 
   // Caution: Do not delete or modify the constructor, or else your build will
@@ -40,7 +41,7 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // This is absolutely necessary for backward compatibility
   @Deprecated
   protected PortfolioManagerImpl(RestTemplate restTemplate) {
-    //this.restTemplate = restTemplate;
+    // this.restTemplate = restTemplate;
   }
 
   // TODO: CRIO_TASK_MODULE_REFACTOR
@@ -100,9 +101,9 @@ public class PortfolioManagerImpl implements PortfolioManager {
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
-    } catch (StockQuoteServiceException e){
+    } catch (StockQuoteServiceException e) {
       throw e;
-    } 
+    }
     Collections.sort(ar, Collections.reverseOrder(Comparator.comparingDouble(AnnualizedReturn::getAnnualizedReturn)));
     return ar;
 
@@ -125,12 +126,12 @@ public class PortfolioManagerImpl implements PortfolioManager {
   // produced by
   // replacing the placeholders with actual parameters.
 
-  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to) throws JsonProcessingException,StockQuoteServiceException {
+  public List<Candle> getStockQuote(String symbol, LocalDate from, LocalDate to)
+      throws JsonProcessingException, StockQuoteServiceException {
     List<Candle> collCandles;
-    try{
-    collCandles = this.stockQuotesService.getStockQuote(symbol, from, to);
-    }
-    catch(StockQuoteServiceException e){
+    try {
+      collCandles = this.stockQuotesService.getStockQuote(symbol, from, to);
+    } catch (StockQuoteServiceException e) {
       throw e;
     }
     return collCandles;
@@ -147,5 +148,59 @@ public class PortfolioManagerImpl implements PortfolioManager {
     String uriTemplate = "https://api.tiingo.com/tiingo/daily/" + symbol + "/prices?" + "startDate=" + startDate
         + "&endDate=" + endDate + "&token=765d771c192650d7d2e334ecbc2032149540ccf9";
     return uriTemplate;
+  }
+
+  public List<AnnualizedReturn> calculateAnnualizedReturnParallel(List<PortfolioTrade> portfolioTrades,
+      LocalDate endDate, int numThreads) throws InterruptedException, StockQuoteServiceException {
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    List<Calculate> callables = new ArrayList<Calculate>();
+    List<AnnualizedReturn> an = new ArrayList<AnnualizedReturn>();
+    try {
+      for (PortfolioTrade parse : portfolioTrades) {
+        callables.add(new Calculate(parse.getSymbol(), parse.getPurchaseDate(), endDate, parse));
+      }
+      List<Future<AnnualizedReturn>> futures = executor.invokeAll(callables);
+      for (Future<AnnualizedReturn> future : futures) {
+        an.add(future.get());
+      }
+    } catch (ExecutionException e) {
+      throw new StockQuoteServiceException(e.toString());
+    }
+    Collections.sort(an, getComparator());
+    executor.shutdown();
+    return an;
+  }
+
+  private class Calculate implements Callable<AnnualizedReturn> {
+    private PortfolioTrade trades;
+    private String symbol;
+    private LocalDate from;
+    private LocalDate to;
+
+    public Calculate(String symbol, LocalDate from, LocalDate to, PortfolioTrade trades) {
+      this.symbol = symbol;
+      this.from = from;
+      this.to = to;
+      this.trades = trades;
+    }
+
+    @Override
+    public AnnualizedReturn call() throws StockQuoteServiceException, JsonProcessingException {
+      List<Candle> collCandles;
+      AnnualizedReturn output;
+      collCandles = getStockQuote(symbol, from, to);
+      int n = collCandles.size() - 1;
+      output = calculateAnnualizedReturns1(collCandles.get(n).getDate(), trades, collCandles.get(0).getOpen(),
+          collCandles.get(n).getClose());
+      return output;
+    }
+  }
+
+  public static AnnualizedReturn calculateAnnualizedReturns1(LocalDate endDate, PortfolioTrade trade, Double buyPrice,
+      Double sellPrice) {
+    Double totalreturn = (sellPrice - buyPrice) / buyPrice;
+    long noOfDaysBetween = ChronoUnit.DAYS.between(trade.getPurchaseDate(), endDate);
+    Double annualized = Math.pow((1 + totalreturn), (365.0 / noOfDaysBetween)) - 1;
+    return new AnnualizedReturn(trade.getSymbol(), annualized, totalreturn);
   }
 }
